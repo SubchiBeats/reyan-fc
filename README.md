@@ -1,5 +1,7 @@
 # Reyan FC ⚽
 
+**▶ Play it live: [subchibeats.github.io/reyan-fc](https://subchibeats.github.io/reyan-fc/)**
+
 An **FC26-style squad builder** web app — build dream teams from real players, chase
 chemistry, rip open packs, conquer SBCs, and win the league in Season mode. Works on
 **desktop and mobile**, with zero build step (pure HTML/CSS/JS).
