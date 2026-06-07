@@ -13,16 +13,24 @@ window.RFC = window.RFC || {};
     return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
       .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   }
+  // Heroes get tied to a historical club for chemistry purposes (FC26 rule).
+  const HERO_CLUB = {
+    'david-villa': 'Valencia',
+    'robin-van-persie': 'Arsenal',
+    'yaya-toure': 'Manchester City',
+    'carlos-tevez': 'Manchester City',
+  };
   // m = make player
   function m(name, rating, pos, alt, club, league, nation, pa, sh, ps, dr, de, ph, special) {
+    const id = slug(name);
     return {
-      id: slug(name),
-      name, rating,
+      id, name, rating,
       pos,                       // primary position
       alt: alt || [],            // alternate positions
       club, league, nation,
       pace: pa, shooting: sh, passing: ps, dribbling: dr, defending: de, physical: ph,
       special: special || null,  // icon|hero|toty|totw|null
+      heroClub: special === 'hero' ? (HERO_CLUB[id] || null) : null,
     };
   }
 
@@ -113,7 +121,7 @@ window.RFC = window.RFC || {};
     m('David Raya', 86, 'GK', [], 'Arsenal', 'Premier League', 'Spain', 48, 84, 84, 86, 87, 84),
     m('Gabriel Martinelli', 83, 'LW', ['ST'], 'Arsenal', 'Premier League', 'Brazil', 92, 78, 75, 84, 42, 72),
     m('Kai Havertz', 84, 'ST', ['CAM'], 'Arsenal', 'Premier League', 'Germany', 78, 80, 80, 82, 56, 84),
-    m('Bukayo Timber', 82, 'RB', ['CB'], 'Arsenal', 'Premier League', 'Netherlands', 82, 50, 74, 78, 83, 78),
+    m('Jurriën Timber', 84, 'RB', ['CB'], 'Arsenal', 'Premier League', 'Netherlands', 84, 50, 76, 80, 85, 80),
 
     /* ===================== CHELSEA ===================== */
     m('Cole Palmer', 87, 'CAM', ['RW'], 'Chelsea', 'Premier League', 'England', 80, 84, 85, 88, 55, 72),

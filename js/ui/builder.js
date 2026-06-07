@@ -1,4 +1,4 @@
-/* Reyan FC — Squad Builder view */
+/* Reyan FC — Squad Builder view (Free Build + Ultimate Team modes) */
 window.RFC = window.RFC || {};
 RFC.views = RFC.views || {};
 
@@ -22,8 +22,8 @@ RFC.views = RFC.views || {};
       };
       draw();
 
-      // re-render on squad changes (view-scoped: auto-cleaned on navigation)
       RFC.viewOn('squad', draw);
+      RFC.viewOn('club', draw);   // UT mode reflects club changes
     },
   };
 
@@ -35,12 +35,13 @@ RFC.views = RFC.views || {};
     return { sq, slots, chem, rating };
   }
 
+  function isUT() { return RFC.state.activeSquad.mode === 'ut'; }
+
   function drawPitch(container) {
     container.innerHTML = '';
     const { sq, slots, chem } = squadInfo();
     const pitch = el('div', { class: 'pitch' });
 
-    // decorative pitch markings
     pitch.appendChild(el('div', { class: 'pitch-lines' }, [
       el('div', { class: 'pl-circle' }),
       el('div', { class: 'pl-mid' }),
@@ -49,10 +50,7 @@ RFC.views = RFC.views || {};
     ]));
 
     slots.forEach((slot, i) => {
-      const node = el('div', {
-        class: 'slot',
-        style: `left:${slot.x}%; top:${slot.y}%;`,
-      });
+      const node = el('div', { class: 'slot', style: `left:${slot.x}%; top:${slot.y}%;` });
       const pid = sq.slots[i];
       const p = RFC.playerById(pid);
 
@@ -62,7 +60,7 @@ RFC.views = RFC.views || {};
         c.addEventListener('click', () => slotMenu(i, slot));
         node.appendChild(c);
         const rm = el('button', { class: 'slot-remove', title: 'Remove', text: '×' });
-        rm.addEventListener('click', (e) => { e.stopPropagation(); RFC.setSlot(i, null); });
+        rm.addEventListener('click', (e) => { e.stopPropagation(); RFC.clearSlot(i); });
         node.appendChild(rm);
       } else {
         const empty = el('button', { class: 'slot-empty' }, [
@@ -78,13 +76,31 @@ RFC.views = RFC.views || {};
     container.appendChild(pitch);
   }
 
+  function usedIids() {
+    return RFC.state.activeSquad.iids.filter((x) => !!x);
+  }
+
   function openPick(i, slot) {
-    RFC.ui.openPlayerPicker({
-      source: 'db',
-      slotPos: slot.pos,
-      title: `Add a ${slot.pos}`,
-      onPick: (p) => RFC.setSlot(i, p.id),
-    });
+    if (isUT()) {
+      if (!RFC.state.club.length) {
+        RFC.toast('Your club is empty — open packs first!', 'warn');
+        return;
+      }
+      RFC.ui.openPlayerPicker({
+        source: 'club',
+        slotPos: slot.pos,
+        excludeIids: usedIids().filter((x) => x !== RFC.state.activeSquad.iids[i]),
+        title: `Add a ${slot.pos} from your club`,
+        onPick: (p, iid) => RFC.setSlot(i, p.id, iid),
+      });
+    } else {
+      RFC.ui.openPlayerPicker({
+        source: 'db',
+        slotPos: slot.pos,
+        title: `Add a ${slot.pos}`,
+        onPick: (p) => RFC.setSlot(i, p.id, null),
+      });
+    }
   }
 
   function slotMenu(i, slot) {
@@ -92,7 +108,7 @@ RFC.views = RFC.views || {};
     const box = el('div', { class: 'mini-menu' }, [
       el('div', { class: 'mini-menu-name', text: p ? p.name : '' }),
       menuBtn('Swap player', () => { m.close(); openPick(i, slot); }),
-      menuBtn('Remove', () => { m.close(); RFC.setSlot(i, null); }),
+      menuBtn('Remove', () => { m.close(); RFC.clearSlot(i); }),
       menuBtn('Cancel', () => m.close(), 'ghost'),
     ]);
     const m = RFC.modal(box, { cls: 'modal-mini' });
@@ -108,13 +124,19 @@ RFC.views = RFC.views || {};
     container.innerHTML = '';
     const { sq, slots, chem, rating } = squadInfo();
     const filled = RFC.countFilled(sq.slots);
+    const ut = isUT();
 
-    // formation selector
+    /* MODE TOGGLE */
+    const modeWrap = el('div', { class: 'mode-toggle' }, [
+      makeModeBtn('free', '🌐 Free Build', 'Build with any player in the game'),
+      makeModeBtn('ut', '⭐ Ultimate Team', 'Only players you own from packs & rewards'),
+    ]);
+
+    /* FORMATION + STATS */
     const formSel = el('select', { class: 'form-select' },
       RFC.FORMATION_NAMES.map((n) => el('option', { value: n, text: n, selected: n === sq.formation })));
     formSel.addEventListener('change', () => RFC.setFormation(formSel.value));
 
-    // ratings tiles
     const tiles = el('div', { class: 'rate-tiles' }, [
       el('div', { class: 'rate-tile' }, [
         el('div', { class: 'rt-num', text: String(rating || '–') }),
@@ -130,17 +152,26 @@ RFC.views = RFC.views || {};
       ]),
     ]);
 
-    // chem bar
     const chemBar = el('div', { class: 'chem-bar' }, [
       el('div', { class: 'chem-bar-fill', style: `width:${(chem.total / 33) * 100}%` }),
     ]);
 
-    // squad meta breakdown (top league/nation)
+    /* UT panel: club-size hint + auto-fill from club */
+    let utPanel = null;
+    if (ut) {
+      const ownedCount = RFC.state.club.length;
+      utPanel = el('div', { class: 'ut-hint' }, [
+        el('span', { class: 'ut-hint-ico', text: '⭐' }),
+        el('span', { class: 'ut-hint-text', html:
+          `Ultimate Team mode — picking from your <b>${ownedCount}</b> owned player${ownedCount === 1 ? '' : 's'}.` }),
+      ]);
+    }
+
     const meta = squadBreakdown(sq.slots);
 
-    // actions
+    /* ACTIONS */
     const actions = el('div', { class: 'side-actions' }, [
-      btn('🎲 Auto-fill best XI', 'btn-primary', () => autoFill()),
+      btn(ut ? '⚡ Auto-fill from club' : '🎲 Auto-fill best XI', 'btn-primary', () => autoFill(ut)),
       btn('💾 Save squad', 'btn', () => saveSquad()),
       btn('📂 Load squad', 'btn', () => loadSquad()),
       btn('🏆 Send to Season', 'btn', () => sendToSeason()),
@@ -148,19 +179,71 @@ RFC.views = RFC.views || {};
     ]);
 
     container.appendChild(el('div', { class: 'side-card' }, [
+      el('label', { class: 'side-label', text: 'BUILD MODE' }),
+      modeWrap,
+      utPanel,
+    ].filter(Boolean)));
+
+    container.appendChild(el('div', { class: 'side-card' }, [
       el('label', { class: 'side-label', text: 'FORMATION' }),
       formSel,
       tiles,
       chemBar,
+      buildChemHelp(chem, slots, sq.slots),
     ]));
+
     container.appendChild(el('div', { class: 'side-card' }, [
       el('label', { class: 'side-label', text: 'SQUAD' }),
       actions,
     ]));
+
     if (meta) container.appendChild(el('div', { class: 'side-card' }, [
       el('label', { class: 'side-label', text: 'BREAKDOWN' }),
       meta,
     ]));
+  }
+
+  function makeModeBtn(key, label, tip) {
+    const active = RFC.state.activeSquad.mode === key;
+    const b = el('button', { class: 'mode-btn' + (active ? ' on' : ''), title: tip }, [
+      el('div', { class: 'mode-lbl', text: label }),
+      el('div', { class: 'mode-sub', text: tip }),
+    ]);
+    b.addEventListener('click', () => {
+      if (active) return;
+      if (RFC.countFilled(RFC.state.activeSquad.slots) > 0 &&
+          !confirm('Switching mode will clear your current squad. Continue?')) return;
+      RFC.setBuildMode(key);
+      RFC.toast(key === 'ut' ? '⭐ Ultimate Team mode' : '🌐 Free Build mode', 'good');
+    });
+    return b;
+  }
+
+  /* Chemistry help panel — shows current league/nation/club counts vs thresholds */
+  function buildChemHelp(chem, slots, squad) {
+    // Find top-counted entity per category, then show progress
+    const links = chem.links;
+    const rows = [];
+    const topOf = (obj, thresholds, label) => {
+      const entries = Object.entries(obj).sort((a, b) => b[1] - a[1]);
+      if (!entries.length) return;
+      const [name, count] = entries[0];
+      const next = thresholds.find((t) => count < t);
+      const goal = next || thresholds[thresholds.length - 1];
+      rows.push(el('div', { class: 'chem-row' }, [
+        el('span', { class: 'chem-row-lbl', text: label }),
+        el('span', { class: 'chem-row-name', text: name }),
+        el('span', { class: 'chem-row-count', text: next ? `${count}/${next}` : `${count} ✓` }),
+      ]));
+    };
+    topOf(links.club, [2, 4, 7], 'Top club');
+    topOf(links.league, [3, 5, 8], 'Top league');
+    topOf(links.nation, [2, 5, 8], 'Top nation');
+    if (!rows.length) return null;
+    return el('div', { class: 'chem-help' }, [
+      el('div', { class: 'chem-help-title', text: 'CHEM PROGRESS' }),
+      ...rows,
+    ]);
   }
 
   function btn(label, cls, fn) {
@@ -188,41 +271,68 @@ RFC.views = RFC.views || {};
     ]);
   }
 
-  /* ---- auto fill: pick best in-position players to maximize chem-friendly XI ---- */
-  function autoFill() {
-    const { sq, slots } = squadInfo();
-    // strategy: choose a dominant league, fill each slot with best in-position player from that league,
-    // fallback to best overall in position.
-    const leagueScore = {};
-    RFC.PLAYERS.forEach((p) => { leagueScore[p.league] = (leagueScore[p.league] || 0) + p.rating; });
-    const bestLeague = Object.entries(leagueScore).sort((a, b) => b[1] - a[1])[0][0];
+  /* ---- auto fill ---- */
+  function autoFill(ut) {
+    const sq = RFC.state.activeSquad;
+    const slots = RFC.FORMATIONS[sq.formation];
 
-    const used = new Set();
-    const slotsAssigned = slots.map((slot) => {
-      const pool = RFC.PLAYERS
-        .filter((p) => RFC.inPosition(p, slot.pos) && !used.has(p.id))
-        .sort((a, b) => {
-          const al = a.league === bestLeague ? 8 : 0;
-          const bl = b.league === bestLeague ? 8 : 0;
-          return (b.rating + bl) - (a.rating + al);
+    if (ut) {
+      // pick the best owned player per slot, prefer dominant league
+      const owned = RFC.state.club.map((c) => ({ iid: c.iid, p: RFC.playerById(c.pid) })).filter((x) => x.p);
+      if (owned.length < slots.length) {
+        RFC.toast(`You only own ${owned.length} players — get ${slots.length - owned.length} more!`, 'warn');
+      }
+      const lgCount = {};
+      owned.forEach((o) => (lgCount[o.p.league] = (lgCount[o.p.league] || 0) + 1));
+      const top = Object.entries(lgCount).sort((a, b) => b[1] - a[1])[0];
+      const targetLeague = top ? top[0] : null;
+      const usedIids = new Set();
+      const newSlots = []; const newIids = [];
+      slots.forEach((slot) => {
+        const inPosCands = owned.filter((o) => !usedIids.has(o.iid) && RFC.inPosition(o.p, slot.pos));
+        const fallback = owned.filter((o) => !usedIids.has(o.iid));
+        const cands = (inPosCands.length ? inPosCands : fallback).sort((a, b) => {
+          const al = a.p.league === targetLeague ? 8 : 0;
+          const bl = b.p.league === targetLeague ? 8 : 0;
+          return (b.p.rating + bl) - (a.p.rating + al);
         });
-      const choice = pool[0];
-      if (choice) used.add(choice.id);
-      return choice ? choice.id : null;
-    });
-    RFC.state.activeSquad.slots = slotsAssigned;
+        const pick = cands[0];
+        if (pick) { usedIids.add(pick.iid); newSlots.push(pick.p.id); newIids.push(pick.iid); }
+        else { newSlots.push(null); newIids.push(null); }
+      });
+      sq.slots = newSlots; sq.iids = newIids;
+    } else {
+      const leagueScore = {};
+      RFC.PLAYERS.forEach((p) => { leagueScore[p.league] = (leagueScore[p.league] || 0) + p.rating; });
+      const bestLeague = Object.entries(leagueScore).sort((a, b) => b[1] - a[1])[0][0];
+      const used = new Set();
+      sq.slots = slots.map((slot) => {
+        const pool = RFC.PLAYERS
+          .filter((p) => RFC.inPosition(p, slot.pos) && !used.has(p.id))
+          .sort((a, b) => {
+            const al = a.league === bestLeague ? 8 : 0;
+            const bl = b.league === bestLeague ? 8 : 0;
+            return (b.rating + bl) - (a.rating + al);
+          });
+        const choice = pool[0];
+        if (choice) used.add(choice.id);
+        return choice ? choice.id : null;
+      });
+      sq.iids = new Array(slots.length).fill(null);
+    }
     RFC.save();
     RFC.emit('squad');
-    RFC.toast('Auto-filled a strong XI ⚡', 'good');
+    RFC.toast('Auto-filled ⚡', 'good');
   }
 
   function saveSquad() {
-    const { sq } = squadInfo();
+    const sq = RFC.state.activeSquad;
     if (RFC.countFilled(sq.slots) === 0) { RFC.toast('Build a squad first.', 'warn'); return; }
     const name = prompt('Name this squad:', 'My XI ' + (RFC.state.savedSquads.length + 1));
     if (!name) return;
     RFC.state.savedSquads.push({
-      name, formation: sq.formation, slots: sq.slots.slice(),
+      name, mode: sq.mode, formation: sq.formation,
+      slots: sq.slots.slice(), iids: sq.iids.slice(),
     });
     RFC.save();
     RFC.toast('Squad saved 💾', 'good');
@@ -233,14 +343,20 @@ RFC.views = RFC.views || {};
     const list = el('div', { class: 'load-list' });
     RFC.state.savedSquads.forEach((s, idx) => {
       const rating = RFC.computeRating(s.slots);
+      const modeTag = s.mode === 'ut' ? ' · ⭐ UT' : '';
       const row = el('div', { class: 'load-row' }, [
         el('div', {}, [
           el('div', { class: 'load-name', text: s.name }),
-          el('div', { class: 'load-sub', text: `${s.formation} · Rating ${rating}` }),
+          el('div', { class: 'load-sub', text: `${s.formation} · Rating ${rating}${modeTag}` }),
         ]),
         el('div', { class: 'load-btns' }, [
           actBtn('Load', () => {
-            RFC.state.activeSquad = { formation: s.formation, slots: s.slots.slice() };
+            RFC.state.activeSquad = {
+              mode: s.mode || 'free',
+              formation: s.formation,
+              slots: s.slots.slice(),
+              iids: (s.iids || new Array(s.slots.length).fill(null)).slice(),
+            };
             RFC.save(); RFC.emit('squad'); m.close(); RFC.toast('Squad loaded.', 'good');
           }),
           actBtn('✕', () => {
@@ -261,7 +377,7 @@ RFC.views = RFC.views || {};
   }
 
   function sendToSeason() {
-    const { sq } = squadInfo();
+    const sq = RFC.state.activeSquad;
     if (RFC.countFilled(sq.slots) < 11) { RFC.toast('Fill all 11 spots to start a season.', 'warn'); return; }
     RFC.pendingSeasonSquad = { formation: sq.formation, slots: sq.slots.slice() };
     RFC.toast('Squad sent to Season ⚽ — open the Season tab.', 'good');

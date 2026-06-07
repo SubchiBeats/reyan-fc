@@ -10,10 +10,12 @@ window.RFC = window.RFC || {};
     coins: 0,
     club: [],            // [{iid, pid}]
     activeSquad: {
+      mode: 'free',                          // 'free' | 'ut'
       formation: RFC.DEFAULT_FORMATION,
-      slots: new Array(11).fill(null), // pid|null
+      slots: new Array(11).fill(null),       // pid|null (always present)
+      iids:  new Array(11).fill(null),       // iid|null (only used in 'ut' mode)
     },
-    savedSquads: [],     // [{name, formation, slots}]
+    savedSquads: [],     // [{name, mode, formation, slots, iids?}]
     sbcCompleted: {},    // {sbcId: count}
     season: null,        // active season object
     stats: { packsOpened: 0, playersPacked: 0, sbcsDone: 0, walkouts: 0, seasonsPlayed: 0 },
@@ -115,19 +117,38 @@ window.RFC = window.RFC || {};
 
   /* ---- squad helpers (active builder squad) ---- */
   RFC.setFormation = function (name) {
-    RFC.state.activeSquad.formation = name;
-    RFC.state.activeSquad.slots = new Array(RFC.FORMATIONS[name].length).fill(null);
+    const sq = RFC.state.activeSquad;
+    const n = RFC.FORMATIONS[name].length;
+    sq.formation = name;
+    sq.slots = new Array(n).fill(null);
+    sq.iids  = new Array(n).fill(null);
     RFC.save();
     RFC.emit('squad');
   };
-  RFC.setSlot = function (i, pid) {
-    RFC.state.activeSquad.slots[i] = pid;
+  RFC.setSlot = function (i, pid, iid) {
+    const sq = RFC.state.activeSquad;
+    sq.slots[i] = pid || null;
+    sq.iids[i]  = iid || null;
     RFC.save();
     RFC.emit('squad');
   };
+  RFC.clearSlot = function (i) { RFC.setSlot(i, null, null); };
   RFC.clearSquad = function () {
-    const n = RFC.FORMATIONS[RFC.state.activeSquad.formation].length;
-    RFC.state.activeSquad.slots = new Array(n).fill(null);
+    const sq = RFC.state.activeSquad;
+    const n = RFC.FORMATIONS[sq.formation].length;
+    sq.slots = new Array(n).fill(null);
+    sq.iids  = new Array(n).fill(null);
+    RFC.save();
+    RFC.emit('squad');
+  };
+  RFC.setBuildMode = function (mode) {
+    const sq = RFC.state.activeSquad;
+    if (sq.mode === mode) return;
+    sq.mode = mode;
+    // Clear when switching — pids/iids semantics differ
+    const n = RFC.FORMATIONS[sq.formation].length;
+    sq.slots = new Array(n).fill(null);
+    sq.iids  = new Array(n).fill(null);
     RFC.save();
     RFC.emit('squad');
   };

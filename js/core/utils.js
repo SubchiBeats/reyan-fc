@@ -105,12 +105,33 @@ window.RFC = window.RFC || {};
   };
 
   /* ---------- player photos via Wikipedia (CC-licensed, async + cached) ----------
-   * Strategy:
-   *  - Try the player's Wikipedia article (overrides for disambiguated names, otherwise name → underscores)
-   *  - Use REST summary endpoint which returns a thumbnail URL
-   *  - Cache the resolved URL (or '__null__' miss) in localStorage forever
+   * Strategy (in order):
+   *  1. Cache hit → return immediately.
+   *  2. Try the direct Wikipedia article (overrides for disambiguated names; otherwise
+   *     just the player's name with underscores).
+   *  3. If that's a disambiguation page or has no thumbnail, fall back to the Wikipedia
+   *     search API with "<name> footballer" — uses the first matching result's image.
+   *  4. Cache the resolved URL (or '__null__' miss) in localStorage forever.
    */
   RFC.WIKI_OVERRIDES = {
+    // Icons / Heroes
+    'pele': 'Pelé', 'pelé': 'Pelé',
+    'diego-maradona': 'Diego_Maradona',
+    'johan-cruyff': 'Johan_Cruyff',
+    'ronaldo-nazario': 'Ronaldo_(Brazilian_footballer)',
+    'zinedine-zidane': 'Zinedine_Zidane',
+    'ronaldinho': 'Ronaldinho',
+    'thierry-henry': 'Thierry_Henry',
+    'franz-beckenbauer': 'Franz_Beckenbauer',
+    'paolo-maldini': 'Paolo_Maldini',
+    'steven-gerrard': 'Steven_Gerrard',
+    'patrick-vieira': 'Patrick_Vieira',
+    'george-best': 'George_Best',
+    'david-villa': 'David_Villa',
+    'robin-van-persie': 'Robin_van_Persie',
+    'yaya-toure': 'Yaya_Touré',
+    'carlos-tevez': 'Carlos_Tevez',
+    // Common disambiguations / accented names
     'bruno-fernandes': 'Bruno_Fernandes_(Portuguese_footballer)',
     'joao-pedro': 'João_Pedro_(footballer,_born_July_2001)',
     'vinicius-jr': 'Vinícius_Júnior',
@@ -126,10 +147,6 @@ window.RFC = window.RFC || {};
     'vitinha': 'Vitinha_(footballer,_born_2000)',
     'rafael-leao': 'Rafael_Leão',
     'lautaro-martinez': 'Lautaro_Martínez',
-    'pelé': 'Pelé',
-    'pele': 'Pelé',
-    'ronaldo-nazario': 'Ronaldo_(Brazilian_footballer)',
-    'ronaldinho': 'Ronaldinho',
     'kylian-mbappe': 'Kylian_Mbappé',
     'son-heung-min': 'Son_Heung-min',
     'lee-kang-in': 'Lee_Kang-in',
@@ -151,10 +168,201 @@ window.RFC = window.RFC || {};
     'maghnes-akliouche': 'Maghnes_Akliouche',
     'desire-doue': 'Désiré_Doué',
     'eliesse-ben-seghir': 'Eliesse_Ben_Seghir',
+    // Accented current players
+    'antoine-griezmann': 'Antoine_Griezmann',
+    'julian-alvarez': 'Julián_Álvarez',
+    'thibaut-courtois': 'Thibaut_Courtois',
+    'jules-kounde': 'Jules_Koundé',
+    'ronald-araujo': 'Ronald_Araújo',
+    'pau-cubarsi': 'Pau_Cubarsí',
+    'serhou-guirassy': 'Serhou_Guirassy',
+    'khvicha-kvaratskhelia': 'Khvicha_Kvaratskhelia',
+    'cristian-romero': 'Cristian_Romero',
+    'guglielmo-vicario': 'Guglielmo_Vicario',
+    'gianluigi-donnarumma': 'Gianluigi_Donnarumma',
+    'gregor-kobel': 'Gregor_Kobel',
+    'aurelien-tchouameni': 'Aurélien_Tchouaméni',
+    'federico-valverde': 'Federico_Valverde',
+    'eduardo-camavinga': 'Eduardo_Camavinga',
+    'dani-carvajal': 'Dani_Carvajal',
+    'arda-guler': 'Arda_Güler',
+    'lamine-yamal': 'Lamine_Yamal',
+    'jude-bellingham': 'Jude_Bellingham',
+    'phil-foden': 'Phil_Foden',
+    'bernardo-silva': 'Bernardo_Silva',
+    'ruben-dias': 'Rúben_Dias',
+    'josko-gvardiol': 'Joško_Gvardiol',
+    'mohamed-salah': 'Mohamed_Salah',
+    'virgil-van-dijk': 'Virgil_van_Dijk',
+    'alexander-isak': 'Alexander_Isak',
+    'florian-wirtz': 'Florian_Wirtz',
+    'ryan-gravenberch': 'Ryan_Gravenberch',
+    'dominik-szoboszlai': 'Dominik_Szoboszlai',
+    'ibrahima-konate': 'Ibrahima_Konaté',
+    'cody-gakpo': 'Cody_Gakpo',
+    'hugo-ekitike': 'Hugo_Ekitike',
+    'conor-bradley': 'Conor_Bradley',
+    'bukayo-saka': 'Bukayo_Saka',
+    'martin-odegaard': 'Martin_Ødegaard',
+    'declan-rice': 'Declan_Rice',
+    'william-saliba': 'William_Saliba',
+    'viktor-gyokeres': 'Viktor_Gyökeres',
+    'gabriel-magalhaes': 'Gabriel_Magalhães',
+    'martin-zubimendi': 'Martín_Zubimendi',
+    'david-raya': 'David_Raya',
+    'gabriel-martinelli': 'Gabriel_Martinelli',
+    'kai-havertz': 'Kai_Havertz',
+    'jurrien-timber': 'Jurriën_Timber',
+    'cole-palmer': 'Cole_Palmer',
+    'moises-caicedo': 'Moisés_Caicedo',
+    'enzo-fernandez': 'Enzo_Fernández_(footballer)',
+    'levi-colwill': 'Levi_Colwill',
+    'nicolas-jackson': 'Nicolas_Jackson',
+    'pedro-neto': 'Pedro_Neto',
+    'reece-james': 'Reece_James_(footballer,_born_1999)',
+    'matthijs-de-ligt': 'Matthijs_de_Ligt',
+    'bryan-mbeumo': 'Bryan_Mbeumo',
+    'matheus-cunha': 'Matheus_Cunha',
+    'james-maddison': 'James_Maddison',
+    'dejan-kulusevski': 'Dejan_Kulusevski',
+    'micky-van-de-ven': 'Micky_van_de_Ven',
+    'bruno-guimaraes': 'Bruno_Guimarães',
+    'anthony-gordon': 'Anthony_Gordon',
+    'nick-pope': 'Nick_Pope',
+    'sandro-tonali': 'Sandro_Tonali',
+    'ollie-watkins': 'Ollie_Watkins',
+    'emiliano-martinez': 'Emiliano_Martínez',
+    'morgan-rogers': 'Morgan_Rogers_(footballer,_born_2002)',
+    'harry-kane': 'Harry_Kane',
+    'jamal-musiala': 'Jamal_Musiala',
+    'joshua-kimmich': 'Joshua_Kimmich',
+    'michael-olise': 'Michael_Olise',
+    'alphonso-davies': 'Alphonso_Davies',
+    'manuel-neuer': 'Manuel_Neuer',
+    'dayot-upamecano': 'Dayot_Upamecano',
+    'serge-gnabry': 'Serge_Gnabry',
+    'konrad-laimer': 'Konrad_Laimer',
+    'granit-xhaka': 'Granit_Xhaka',
+    'jeremie-frimpong': 'Jeremie_Frimpong',
+    'karim-adeyemi': 'Karim_Adeyemi',
+    'julian-brandt': 'Julian_Brandt',
+    'benjamin-sesko': 'Benjamin_Šeško',
+    'xavi-simons': 'Xavi_Simons',
+    'lois-openda': 'Loïs_Openda',
+    'ousmane-dembele': 'Ousmane_Dembélé',
+    'nuno-mendes': 'Nuno_Mendes_(Portuguese_footballer)',
+    'joao-neves': 'João_Neves_(footballer,_born_October_2004)',
+    'marquinhos': 'Marquinhos',
+    'achraf-hakimi': 'Achraf_Hakimi',
+    'bradley-barcola': 'Bradley_Barcola',
+    'lee-kang-in': 'Lee_Kang-in',
+    'warren-zaire-emery': 'Warren_Zaïre-Emery',
+    'lucas-chevalier': 'Lucas_Chevalier',
+    'illia-zabarnyi': 'Illia_Zabarnyi',
+    'nicolo-barella': 'Nicolò_Barella',
+    'alessandro-bastoni': 'Alessandro_Bastoni',
+    'federico-dimarco': 'Federico_Dimarco',
+    'marcus-thuram': 'Marcus_Thuram',
+    'rafael-leao': 'Rafael_Leão',
+    'christian-pulisic': 'Christian_Pulisic',
+    'mike-maignan': 'Mike_Maignan',
+    'luka-modric': 'Luka_Modrić',
+    'khephren-thuram': 'Khéphren_Thuram',
+    'kenan-yildiz': 'Kenan_Yıldız',
+    'dusan-vlahovic': 'Dušan_Vlahović',
+    'federico-gatti': 'Federico_Gatti',
+    'scott-mctominay': 'Scott_McTominay',
+    'romelu-lukaku': 'Romelu_Lukaku',
+    'alessandro-buongiorno': 'Alessandro_Buongiorno',
+    'jan-oblak': 'Jan_Oblak',
+    'robin-le-normand': 'Robin_Le_Normand',
+    'nico-williams': 'Nico_Williams',
+    'alex-baena': 'Álex_Baena',
+    'mikel-oyarzabal': 'Mikel_Oyarzabal',
+    'inaki-williams': 'Iñaki_Williams',
+    'isco': 'Isco',
+    'sadio-mane': 'Sadio_Mané',
+    'karim-benzema': 'Karim_Benzema',
+    'riyad-mahrez': 'Riyad_Mahrez',
+    'ruben-neves': 'Rúben_Neves',
+    'aleksandar-mitrovic': 'Aleksandar_Mitrović',
+    'victor-osimhen': 'Victor_Osimhen',
+    'mauro-icardi': 'Mauro_Icardi',
+    'angel-di-maria': 'Ángel_Di_María',
+    'vangelis-pavlidis': 'Vangelis_Pavlidis',
+    'luuk-de-jong': 'Luuk_de_Jong',
+    'yann-sommer': 'Yann_Sommer',
+    'marc-cucurella': 'Marc_Cucurella',
+    'pervis-estupinan': 'Pervis_Estupiñán',
+    'wilfred-ndidi': 'Wilfred_Ndidi',
+    'takefusa-kubo': 'Takefusa_Kubo',
+    'kaoru-mitoma': 'Kaoru_Mitoma',
+    'weston-mckennie': 'Weston_McKennie',
+    'yunus-musah': 'Yunus_Musah',
+    'brennan-johnson': 'Brennan_Johnson',
+    'mohammed-kudus': 'Mohammed_Kudus',
+    'ademola-lookman': 'Ademola_Lookman',
+    'charles-de-ketelaere': 'Charles_De_Ketelaere',
+    'franco-mastantuono': 'Franco_Mastantuono',
+    'andres-garcia': 'Andrés_García_(footballer,_born_2003)',
+    'antonee-robinson': 'Antonee_Robinson',
+    'yves-bissouma': 'Yves_Bissouma',
+    'rasmus-hojlund': 'Rasmus_Højlund',
+    'joshua-zirkzee': 'Joshua_Zirkzee',
+    'rico-lewis': 'Rico_Lewis',
+    'nathan-ake': 'Nathan_Aké',
+    'mateo-kovacic': 'Mateo_Kovačić',
+    'joelinton': 'Joelinton',
+    'patrik-schick': 'Patrik_Schick',
+    'alejandro-grimaldo': 'Alejandro_Grimaldo',
+    'amad-diallo': 'Amad_Diallo',
+    'omar-marmoush': 'Omar_Marmoush',
+    'frenkie-de-jong': 'Frenkie_de_Jong',
+    'marc-andre-ter-stegen': 'Marc-André_ter_Stegen',
+    'dani-olmo': 'Dani_Olmo',
+    'marcus-rashford': 'Marcus_Rashford',
+    'robert-lewandowski': 'Robert_Lewandowski',
+    'raphinha': 'Raphinha',
+    'erling-haaland': 'Erling_Haaland',
+    'rodrygo': 'Rodrygo',
+    'antonio-rudiger': 'Antonio_Rüdiger',
+    'trent-alexander-arnold': 'Trent_Alexander-Arnold',
+    'alisson': 'Alisson',
+    'caoimhin-kelleher': 'Caoimhín_Kelleher',
+    'mathys-tel': 'Mathys_Tel',
+    'sekou-kone': 'Sékou_Koné',
+    'chido-obi': 'Chido_Obi',
+    'mikey-moore': 'Mikey_Moore',
+    'ayden-heaven': 'Ayden_Heaven',
+    'jacob-ramsey': 'Jacob_Ramsey',
+    'tommy-doyle': 'Tommy_Doyle_(footballer,_born_2001)',
+    'james-trafford': 'James_Trafford',
+    'tyler-dibling': 'Tyler_Dibling',
+    'lewis-miley': 'Lewis_Miley',
+    'senne-lammens': 'Senne_Lammens',
+    'evann-guessand': 'Evann_Guessand',
+    'assane-diao': 'Assane_Diao',
+    'kenan-komur': null, // skip - obscure
   };
 
-  const FACE_CACHE_PREFIX = 'rfc.face.v2.';
+  const FACE_CACHE_PREFIX = 'rfc.face.v3.';
   const inflight = {};
+
+  function buildSummaryUrl(article) {
+    const enc = encodeURIComponent(article).replace(/%2F/g, '/').replace(/%3A/g, ':');
+    return `https://en.wikipedia.org/api/rest_v1/page/summary/${enc}?redirect=true`;
+  }
+
+  function buildSearchUrl(name) {
+    const q = encodeURIComponent(name + ' footballer');
+    return `https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*` +
+      `&generator=search&gsrsearch=${q}&gsrlimit=3&prop=pageimages&piprop=thumbnail&pithumbsize=400`;
+  }
+
+  function upgradeRes(src) {
+    if (!src) return null;
+    return src.replace(/\/(\d{2,4})px-/, '/500px-');
+  }
 
   RFC.faceUrl = function (player) {
     const id = player.id;
@@ -163,24 +371,44 @@ window.RFC = window.RFC || {};
     if (hit !== null) return Promise.resolve(hit === '__null__' ? null : hit);
     if (inflight[id]) return inflight[id];
 
-    const article = RFC.WIKI_OVERRIDES[id] || player.name.replace(/ /g, '_');
-    // encodeURIComponent then put back colons/slashes that wikipedia accepts
-    const enc = encodeURIComponent(article).replace(/%2F/g, '/').replace(/%3A/g, ':');
-    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${enc}?redirect=true`;
+    // Explicit null override = skip lookup entirely
+    if (RFC.WIKI_OVERRIDES[id] === null) {
+      localStorage.setItem(key, '__null__');
+      return Promise.resolve(null);
+    }
 
-    const p = fetch(url, { headers: { Accept: 'application/json' } })
+    const article = RFC.WIKI_OVERRIDES[id] || player.name.replace(/ /g, '_');
+
+    // 1) direct summary
+    const tryDirect = fetch(buildSummaryUrl(article), { headers: { Accept: 'application/json' } })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (!data) return null;
-        // Disambiguation pages have no useful thumbnail; bail
-        if (data.type === 'disambiguation') return null;
-        let src = (data.thumbnail && data.thumbnail.source) || null;
-        // Bump to ~400px wide for crisp cards
-        if (src) src = src.replace(/\/(\d{2,4})px-/, '/400px-');
-        localStorage.setItem(key, src || '__null__');
-        return src;
+        if (!data || data.type === 'disambiguation') return null;
+        return (data.thumbnail && data.thumbnail.source) || null;
       })
-      .catch(() => { localStorage.setItem(key, '__null__'); return null; });
+      .catch(() => null);
+
+    // 2) search fallback (when direct misses)
+    const trySearch = () =>
+      fetch(buildSearchUrl(player.name), { headers: { Accept: 'application/json' } })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (!data || !data.query || !data.query.pages) return null;
+          const pages = Object.values(data.query.pages).sort((a, b) => (a.index || 0) - (b.index || 0));
+          for (const pg of pages) {
+            if (pg.thumbnail && pg.thumbnail.source) return pg.thumbnail.source;
+          }
+          return null;
+        })
+        .catch(() => null);
+
+    const p = tryDirect
+      .then((src) => src || trySearch())
+      .then((src) => {
+        const better = upgradeRes(src);
+        localStorage.setItem(key, better || '__null__');
+        return better;
+      });
 
     inflight[id] = p;
     p.finally(() => delete inflight[id]);
