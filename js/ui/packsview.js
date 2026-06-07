@@ -62,7 +62,10 @@ RFC.views = RFC.views || {};
   }
 
   /* ---------------- opening experience ---------------- */
-  function runOpening(pack, pulls) {
+  // opts.returnTo (default 'packs') — view to return to when "Close" is clicked
+  function runOpening(pack, pulls, opts) {
+    opts = opts || {};
+    const returnTo = opts.returnTo || 'packs';
     // add to club immediately (so nothing is lost), reveal for flair
     pulls.forEach((p) => RFC.addToClub(p));
     RFC.emit('club');
@@ -112,16 +115,19 @@ RFC.views = RFC.views || {};
         el('div', { class: 'open-best', text: `Best pull: ${best.name} (${best.rating})` }),
         grid,
         el('div', { class: 'open-actions' }, [
-          actionBtn('Open another', 'btn-primary', () => {
+          // "Open another" only makes sense from the pack store (you paid for it).
+          // From SBC/Season rewards, hide it — the pack was a gift.
+          returnTo === 'packs' ? actionBtn('Open another', 'btn-primary', () => {
             done();
             if (RFC.spendCoins(pack.price)) {
               const more = RFC.openPack(pack);
               RFC.state.stats.packsOpened++; RFC.state.stats.playersPacked += more.length; RFC.save();
-              runOpening(pack, more);
+              runOpening(pack, more, { returnTo });
             } else { RFC.toast('Not enough coins!', 'warn'); RFC.router.go('packs'); }
-          }),
+          }) : null,
           actionBtn('To my club', 'btn', () => { done(); RFC.router.go('club'); }),
-          actionBtn('Close', 'btn ghost', () => { done(); RFC.router.go('packs'); }),
+          actionBtn(returnTo === 'packs' ? 'Close' : `Back to ${returnTo === 'sbc' ? 'SBCs' : 'Season'}`,
+                    'btn ghost', () => { done(); RFC.router.go(returnTo); }),
         ]),
       ]);
       cardHolder.innerHTML = '';
@@ -145,14 +151,16 @@ RFC.views = RFC.views || {};
     return b;
   }
 
-  /* grant a free pack (e.g. SBC reward) and show the reveal */
-  RFC.grantPack = function (packId) {
+  /* grant a free pack (e.g. SBC or Season reward) and show the reveal.
+   * `returnTo` is the view to navigate to when the user closes the summary
+   * (defaults to 'packs' for direct purchases). */
+  RFC.grantPack = function (packId, returnTo) {
     const pack = RFC.packById(packId);
     if (!pack) return;
     const pulls = RFC.openPack(pack);
     RFC.state.stats.packsOpened++;
     RFC.state.stats.playersPacked += pulls.length;
     RFC.save();
-    runOpening(pack, pulls);
+    runOpening(pack, pulls, { returnTo: returnTo || 'packs' });
   };
 })(window.RFC);

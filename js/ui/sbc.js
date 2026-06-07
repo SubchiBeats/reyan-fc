@@ -236,7 +236,7 @@ RFC.views = RFC.views || {};
     work = null;
     RFC.toast(`SBC complete! +${RFC.fmtCoins(sbc.reward.coins)} coins`, 'good');
     if (sbc.reward.pack) {
-      RFC.grantPack(sbc.reward.pack);
+      RFC.grantPack(sbc.reward.pack, 'sbc');
     } else {
       RFC.router.go('sbc');
     }

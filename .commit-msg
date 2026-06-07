@@ -1,0 +1,15 @@
+QA polish: stronger OOP indicator and smarter pack-close routing
+
+OOP cards now use a red glow halo + bold "OOP" badge at the bottom
+of the card, replacing the subtle 2px outline that was hard to see
+against the gold/silver/bronze fills. Cards also get a deeper
+saturation drop so they read as visually penalized.
+
+Reward packs from SBC and Season now route back to their source view
+on close (e.g. "Back to SBCs" / "Back to Season") instead of always
+dumping the user on the pack store. The "Open another" CTA is hidden
+for reward packs (since they were a gift, not a purchase).
+
+Threading: RFC.grantPack(packId, returnTo) and runOpening accepts
+opts.returnTo. SBC submits and Season reward-claims pass their
+view name so the close button reads correctly.

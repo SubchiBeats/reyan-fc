@@ -276,7 +276,7 @@ RFC.views = RFC.views || {};
         RFC.addCoins(reward.coins);
         RFC.save();
         RFC.toast(`+${RFC.fmtCoins(reward.coins)} coins!`, 'good');
-        if (reward.pack) RFC.grantPack(reward.pack);
+        if (reward.pack) RFC.grantPack(reward.pack, 'season');
         else RFC.router.go('season');
       });
       panel.appendChild(claim);
