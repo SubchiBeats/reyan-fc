@@ -2,6 +2,8 @@
 
 **▶ Play it live: [subchibeats.github.io/reyan-fc](https://subchibeats.github.io/reyan-fc/)**
 
+![Stack: vanilla JS](https://img.shields.io/badge/stack-vanilla%20JS-f7df1e) ![Build: none](https://img.shields.io/badge/build-none-2ea44f) ![Runs in: browser](https://img.shields.io/badge/runs%20in-browser-1572b6) ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
+
 An **FC26-style squad builder** web app — build dream teams from real players, chase
 chemistry, rip open packs, conquer SBCs, and win the league in Season mode. Works on
 **desktop and mobile**, with zero build step (pure HTML/CSS/JS).
@@ -71,3 +73,12 @@ initials + team colors. Everything else is self-contained.
 
 If Wikipedia can't find a player's article or returns no thumbnail, the card falls back
 to the player's initials inside the photo frame.
+
+## License
+
+MIT © Sahib Singh — see [LICENSE](LICENSE).
+
+This is an unofficial fan project. Player names, club/league/nation data and ratings are
+approximations created for this game and are **not** affiliated with, endorsed by, or
+sourced from EA Sports, FUTBIN, or any club, league or governing body. Player photos are
+CC-licensed thumbnails fetched at runtime from Wikipedia and remain under their own licenses.
